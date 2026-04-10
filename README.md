@@ -1,30 +1,31 @@
-# Face Recognition Attendance System
+# Auto-Attend 🚀
 
-A production-ready attendance management system using face recognition, built with FastAPI and MongoDB.
+AI-based Attendance System using Face Recognition.
 
-## Features
+## 🔹 Description
+Auto-Attend is a production-ready attendance management system built using FastAPI and MongoDB. It uses face recognition technology to automate attendance marking efficiently and accurately.
 
-- **Face Registration**: Register employee faces with multiple photos for better accuracy
-- **Automatic Attendance**: Mark attendance through face recognition
-- **Smart Check-in/Check-out**: Automatically determines attendance type based on history
-- **Duplicate Prevention**: Prevents marking attendance multiple times within a configurable window
-- **REST API**: Full-featured API for integration with other systems
-- **Docker Support**: Easy deployment with Docker and Docker Compose
+## 🔹 Features
+- Face Registration (supports multiple images for better accuracy)
+- Automatic Attendance using face recognition
+- Smart Check-in / Check-out detection
+- Duplicate attendance prevention within a time window
+- REST API for integration with other systems
+- Docker support for easy deployment
 
-## Quick Start
+## 🔹 Tech Stack
+- Backend: FastAPI
+- Database: MongoDB
+- AI/ML: Face Recognition
+- Deployment: Docker & Docker Compose
+
+## 🔹 Quick Start
 
 ### Using Docker (Recommended)
 
 ```bash
-# Clone the repository
-git clone [github.com](https://github.com/yourusername/face-attendance-system.git)
-cd face-attendance-system
+git clone https://github.com/Srishtij20/Auto-Attend.git
+cd Auto-Attend
 
-# Copy environment file
 cp .env.example .env
-
-# Start the application
 docker-compose up -d
-
-# Access the API at [localhost](http://localhost:8000)
-# API docs at [localhost](http://localhost:8000/docs)
