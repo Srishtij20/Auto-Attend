@@ -1,5 +1,7 @@
 import face_recognition
 import numpy as np
+import cv2
+import time
 from typing import List, Optional, Tuple, Dict
 import logging
 from app.config import get_settings
@@ -10,6 +12,9 @@ from app.utils.image_utils import (
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+def is_blurry(image, threshold=100):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    return cv2.Laplacian(gray, cv2.CV_64F).var() < threshold
 
 class FaceService:
     def __init__(self):

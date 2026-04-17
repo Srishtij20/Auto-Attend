@@ -1,0 +1,30 @@
+from pydantic import BaseModel
+from datetime import datetime
+from typing import Optional
+from app.models.attendance import AttendanceType
+
+class AttendanceMarkRequest(BaseModel):
+    image_data: str
+    attendance_type: Optional[AttendanceType] = None
+    location: Optional[str] = None
+    device_id: Optional[str] = None
+
+class AttendanceBase(BaseModel):
+    employee_id: str              # employee unique ID
+    employee_name: str            # employee name
+    confidence: float             # AI confidence (0–1)
+
+    attendance_type: Optional[AttendanceType] = None
+    location: Optional[str] = None
+    device_id: Optional[str] = None
+
+class AttendanceCreate(AttendanceBase):
+    pass
+
+class AttendanceResponse(AttendanceBase):
+    timestamp: datetime
+    success: bool
+    message: str
+
+    class Config:
+        from_attributes = True
