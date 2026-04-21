@@ -1,3 +1,4 @@
+from app.services.auth_service import require_admin_or_teacher, TokenData
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from fastapi.responses import StreamingResponse
 from typing import List, Optional
@@ -7,6 +8,7 @@ from bson import ObjectId
 import base64
 import io
 import logging
+from app.utils.image_utils import get_face_encoding
 
 from app.database import get_database, get_fs
 from app.models.employee import (
@@ -18,9 +20,12 @@ from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+# Router for employee management and face recognition operations
 router = APIRouter(prefix="/employees", tags=["employees"])
 
 
+# Converts raw database document into API response schema
 def _build_response(emp: dict) -> EmployeeResponse:
     return EmployeeResponse(
         id=str(emp["_id"]),
@@ -36,10 +41,12 @@ def _build_response(emp: dict) -> EmployeeResponse:
     )
 
 
-@router.post("", response_model=EmployeeResponse, status_code=201)  # FIX: removed trailing slash
+# Creates a new employee record
+@router.post("", response_model=EmployeeResponse, status_code=201)
 async def create_employee(
     employee: EmployeeCreate,
     db: AsyncIOMotorDatabase = Depends(get_database),
+    _: TokenData = Depends(require_admin_or_teacher),  
 ):
     existing = await db.employees.find_one({
         "$or": [{"employee_id": employee.employee_id}, {"email": employee.email}]
@@ -61,7 +68,8 @@ async def create_employee(
     return _build_response(doc)
 
 
-@router.get("", response_model=EmployeeListResponse)  # FIX: removed trailing slash
+# Retrieves a paginated and filtered list of employees
+@router.get("", response_model=EmployeeListResponse)
 async def list_employees(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -91,12 +99,14 @@ async def list_employees(
     )
 
 
-@router.get("/meta/departments")  # FIX: moved ABOVE /{employee_id} to prevent shadowing
+# Returns list of distinct departments for active employees
+@router.get("/meta/departments")
 async def list_departments(db: AsyncIOMotorDatabase = Depends(get_database)):
     depts = await db.employees.distinct("department", {"is_active": True})
     return {"departments": sorted(d for d in depts if d)}
 
 
+# Retrieves details of a single employee by employee_id
 @router.get("/{employee_id}", response_model=EmployeeResponse)
 async def get_employee(
     employee_id: str,
@@ -108,6 +118,7 @@ async def get_employee(
     return _build_response(emp)
 
 
+# Updates employee details (partial update supported)
 @router.patch("/{employee_id}", response_model=EmployeeResponse)
 async def update_employee(
     employee_id: str,
@@ -126,6 +137,7 @@ async def update_employee(
     return _build_response(updated)
 
 
+# Uploads and processes an employee photo via file upload
 @router.post("/{employee_id}/photos", status_code=201)
 async def add_photo(
     employee_id: str,
@@ -137,6 +149,7 @@ async def add_photo(
     return await _process_photo_upload(employee_id, await file.read(), db, fs, face_service)
 
 
+# Uploads and processes an employee photo via base64 input
 @router.post("/{employee_id}/photos/base64", status_code=201)
 async def add_photo_base64(
     employee_id: str,
@@ -151,6 +164,7 @@ async def add_photo_base64(
     return await _process_photo_upload(employee_id, raw, db, fs, face_service)
 
 
+# Core logic for validating, encoding, and storing employee photos
 async def _process_photo_upload(employee_id, raw_bytes, db, fs, face_service):
     emp = await db.employees.find_one({"employee_id": employee_id})
     if not emp:
@@ -195,6 +209,7 @@ async def _process_photo_upload(employee_id, raw_bytes, db, fs, face_service):
     }
 
 
+# Streams a stored employee photo by photo_id
 @router.get("/{employee_id}/photos/{photo_id}")
 async def get_photo(
     employee_id: str, photo_id: str,
@@ -208,6 +223,7 @@ async def get_photo(
         raise HTTPException(404, "Photo not found")
 
 
+# Lists all photos and metadata for a given employee
 @router.get("/{employee_id}/photos")
 async def list_photos(
     employee_id: str, db: AsyncIOMotorDatabase = Depends(get_database),
@@ -223,6 +239,7 @@ async def list_photos(
     }
 
 
+# Deletes a specific photo and updates associated encodings
 @router.delete("/{employee_id}/photos/{photo_id}")
 async def delete_photo(
     employee_id: str, photo_id: str,
@@ -255,6 +272,7 @@ async def delete_photo(
     return {"success": True, "message": "Photo deleted", "photo_count": len(photos)}
 
 
+# Removes all photos and encodings for an employee
 @router.delete("/{employee_id}/photos")
 async def clear_photos(
     employee_id: str,
@@ -276,6 +294,7 @@ async def clear_photos(
     return {"success": True, "message": "All photos cleared"}
 
 
+# Soft deletes (deactivates) an employee record
 @router.delete("/{employee_id}")
 async def deactivate_employee(
     employee_id: str, db: AsyncIOMotorDatabase = Depends(get_database),

@@ -12,10 +12,14 @@ from app.utils.image_utils import (
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+
+# Utility function to check if an image is blurry using variance of Laplacian
 def is_blurry(image, threshold=100):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     return cv2.Laplacian(gray, cv2.CV_64F).var() < threshold
 
+
+# Service handling face recognition operations (encoding, matching, validation)
 class FaceService:
     def __init__(self):
         self.tolerance = settings.face_recognition_tolerance
@@ -23,6 +27,7 @@ class FaceService:
         self.top_n = settings.face_voting_top_n
         self.max_photos = settings.max_photos_per_employee
 
+    # Extracts face encoding from input image after validation and preprocessing
     def extract_face_encoding(
         self, image_data: str
     ) -> Tuple[Optional[List[float]], str]:
@@ -51,6 +56,7 @@ class FaceService:
             logger.error(f"extract_face_encoding error: {e}")
             return None, f"Error processing image: {e}"
 
+    # Matches an input face against known encodings and returns best match with confidence
     def find_matching_face(
         self,
         image_data: str,
@@ -125,6 +131,7 @@ class FaceService:
             logger.error(f"find_matching_face error: {e}")
             return None, None, 0.0, f"Error processing image: {e}"
 
+    # Checks if a new face encoding is too similar to existing ones (duplicate detection)
     def is_duplicate_encoding(
         self,
         new_encoding: List[float],
@@ -138,8 +145,10 @@ class FaceService:
         return bool(np.min(distances) < threshold)
 
 
+# Singleton instance of FaceService
 face_service = FaceService()
 
 
+# Dependency provider for injecting FaceService instance
 def get_face_service() -> FaceService:
     return face_service

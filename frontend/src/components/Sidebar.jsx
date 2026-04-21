@@ -2,14 +2,20 @@ import React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 
 const links = [
-  { to: '/',          icon: '⊞', label: 'Dashboard' },
-  { to: '/mark',      icon: '◉', label: 'Mark Attendance' },
-  { to: '/employees', icon: '◈', label: 'Employees' },
-  { to: '/records',   icon: '☰', label: 'Records' },
-  { to: '/summary',   icon: '◫', label: 'Summary' },
+  { to: '/',               icon: '⊞', label: 'Dashboard' },
+  { to: '/attendance',     icon: '◉', label: 'Class Attendance' },
+  { to: '/mark',           icon: '◎', label: 'Quick Mark' },
+  { to: '/enroll',         icon: '◑', label: 'Face Enrollment' },
+  { to: '/employees',      icon: '◈', label: 'Employees' },
+  { to: '/students',       icon: '🎓', label: 'Students' },
+  { to: '/student-portal', icon: '☰', label: 'Student Portal' },
+  { to: '/records',        icon: '≡', label: 'Records' },
+  { to: '/summary',        icon: '◫', label: 'Summary' },
+  { to: '/classes',        icon: '⊟', label: 'Classes' },
+  { to: '/users',          icon: '👤', label: 'Users' },
 ]
 
-export default function Sidebar({ liveCount }) {
+export default function Sidebar({ liveCount, onLogout, user }) {
   const loc = useLocation()
   return (
     <aside style={{ width: 220, flexShrink: 0, background: '#1e1b4b', display: 'flex', flexDirection: 'column', minHeight: '100vh', position: 'sticky', top: 0, height: '100vh' }}>
@@ -42,8 +48,19 @@ export default function Sidebar({ liveCount }) {
           )
         })}
       </nav>
-      <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,.08)', fontSize: 11, color: '#6366f1' }}>
-        {liveCount} currently checked in
+      <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,.08)' }}>
+        <div style={{ fontSize: 11, color: '#6366f1', marginBottom: 8 }}>
+          {liveCount} currently checked in
+        </div>
+        {onLogout && (
+          <button onClick={onLogout} style={{
+            width: '100%', padding: '7px 12px', borderRadius: 8,
+            background: 'rgba(239,68,68,.15)', border: '1px solid rgba(239,68,68,.3)',
+            color: '#fca5a5', fontSize: 12, fontWeight: 600, cursor: 'pointer'
+          }}>
+            Sign Out
+          </button>
+        )}
       </div>
     </aside>
   )

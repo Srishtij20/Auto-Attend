@@ -1,15 +1,112 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #f5f5f4; --surface: #ffffff; --border: #e7e5e4;
-  --text: #1c1c1a; --muted: #78716c; --accent: #4f46e5;
-  --accent-l: #eef2ff; --success: #16a34a; --success-l: #dcfce7;
-  --danger: #dc2626; --danger-l: #fee2e2; --warn: #d97706; --warn-l: #fef3c7;
+  --bg: #f5f5f4;
+  --surface: #ffffff;
+  --surface2: #fafaf9;
+  --surface3: #f0ede9;
+  --border: #e7e5e4;
+  --border2: #d6d3d1;
+  --text: #1c1c1a;
+  --text2: #78716c;
+  --text3: #a8a29e;
+  --accent: #4f46e5;
+  --accent2: #4338ca;
+  --accent-dim: #eef2ff;
+  --accent-l: #eef2ff;
+  --success: #16a34a;
+  --success-l: #dcfce7;
+  --danger: #dc2626;
+  --danger-l: #fee2e2;
+  --warn: #d97706;
+  --warn-l: #fef3c7;
+  --sidebar-bg: #1e1b4b;
+  --sidebar-text: #a5b4fc;
+  --sidebar-active: rgba(99,102,241,0.25);
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.10);
 }
 
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+[data-theme="dark"] {
+  --bg: #0f0e17;
+  --surface: #1a1825;
+  --surface2: #221f32;
+  --surface3: #2a2740;
+  --border: #2e2b42;
+  --border2: #3d3a54;
+  --text: #eeedf5;
+  --text2: #9e9bb8;
+  --text3: #5c596e;
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --accent-dim: #1e1b4b;
+  --accent-l: #1e1b4b;
+  --success: #22c55e;
+  --success-l: #052e16;
+  --danger: #f87171;
+  --danger-l: #2d0a0a;
+  --warn: #fbbf24;
+  --warn-l: #1c1004;
+  --sidebar-bg: #0d0c18;
+  --sidebar-text: #818cf8;
+  --sidebar-active: rgba(99,102,241,0.2);
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  transition: background 0.2s, color 0.2s;
+}
+
 a { color: inherit; text-decoration: none; }
 button { cursor: pointer; font: inherit; }
 input, select { font: inherit; }
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+input, select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+input::placeholder { color: var(--text3); }
+select option { background: var(--surface); color: var(--text); }
+
+table { width: 100%; border-collapse: collapse; }
+th {
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+tr:hover td { background: var(--surface2); }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }

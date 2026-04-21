@@ -1,6 +1,11 @@
-FROM python:3.11-slim
+﻿FROM node:20-slim AS frontend-builder
+WORKDIR /frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
 
-# Install system dependencies for face_recognition
+FROM python:3.11-slim
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -9,21 +14,15 @@ RUN apt-get update && apt-get install -y \
     libx11-dev \
     libgtk-3-dev \
     libboost-python-dev \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
-
-# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
 COPY . .
-
-# Create non-root user
+COPY --from=frontend-builder /frontend/dist ./frontend/dist
 RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser
-
 EXPOSE 8000
-
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

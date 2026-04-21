@@ -1,5 +1,4 @@
-version: '3.8'
-
+﻿version: '3.8'
 services:
   app:
     build: .
@@ -8,11 +7,11 @@ services:
     environment:
       - MONGODB_URL=mongodb://mongo:27017
       - DATABASE_NAME=face_attendance
+      - SECRET_KEY=change-me-in-production
       - DEBUG=false
     depends_on:
       - mongo
     restart: unless-stopped
-
   mongo:
     image: mongo:7
     ports:
@@ -20,6 +19,5 @@ services:
     volumes:
       - mongo_data:/data/db
     restart: unless-stopped
-
 volumes:
   mongo_data:

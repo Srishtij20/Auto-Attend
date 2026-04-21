@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
+# Service layer handling attendance logic and analytics
 class AttendanceService:
     def __init__(self, db: AsyncIOMotorDatabase):
         self.db = db
@@ -18,6 +19,7 @@ class AttendanceService:
         self.emp = db.employees
         self.dup_window = timedelta(minutes=settings.duplicate_attendance_window_minutes)
 
+    # Checks if a similar attendance entry exists within a defined time window
     async def check_duplicate(self, employee_id: str, attendance_type: AttendanceType) -> bool:
         cutoff = datetime.utcnow() - self.dup_window
         rec = await self.col.find_one({
@@ -27,6 +29,7 @@ class AttendanceService:
         })
         return rec is not None
 
+    # Determines whether the next attendance should be check-in or check-out
     async def determine_type(self, employee_id: str) -> AttendanceType:
         today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         last = await self.col.find_one(
@@ -41,6 +44,7 @@ class AttendanceService:
             else AttendanceType.CHECK_IN
         )
 
+    # Records attendance entry with validation and duplicate prevention
     async def mark_attendance(
         self,
         employee_id: str,
@@ -75,6 +79,7 @@ class AttendanceService:
                 "device_id": device_id,
                 "snapshot_id": snapshot_id,
             })
+
             return AttendanceMarkResponse(
                 success=True,
                 message=f"{attendance_type.value.replace('_', ' ').title()} recorded successfully",
@@ -88,6 +93,7 @@ class AttendanceService:
             logger.error(f"mark_attendance error: {e}")
             return AttendanceMarkResponse(success=False, message=str(e))
 
+    # Retrieves filtered and paginated attendance records
     async def get_records(
         self,
         employee_id: Optional[str] = None,
@@ -102,6 +108,7 @@ class AttendanceService:
             query["employee_id"] = employee_id
         if attendance_type:
             query["attendance_type"] = attendance_type
+
         ts_filter: Dict = {}
         if start_date:
             ts_filter["$gte"] = start_date
@@ -113,13 +120,17 @@ class AttendanceService:
         total = await self.col.count_documents(query)
         cursor = self.col.find(query).sort("timestamp", -1).skip(skip).limit(limit)
         records = await cursor.to_list(length=limit)
+
         for r in records:
             r["_id"] = str(r["_id"])
+
         return {"items": records, "total": total, "skip": skip, "limit": limit}
 
+    # Generates per-employee daily attendance summary
     async def get_daily_summary(self, date: Optional[datetime] = None) -> List[AttendanceSummary]:
         if date is None:
             date = datetime.utcnow()
+
         day_start = date.replace(hour=0, minute=0, second=0, microsecond=0)
         day_end = day_start + timedelta(days=1)
 
@@ -132,6 +143,7 @@ class AttendanceService:
                 "records": {"$push": {"type": "$attendance_type", "time": "$timestamp"}},
             }},
         ]
+
         results = await self.col.aggregate(pipeline).to_list(length=None)
 
         emp_ids = [r["_id"] for r in results]
@@ -165,10 +177,13 @@ class AttendanceService:
                 total_hours=total_hours,
                 status=status,
             ))
+
         return summaries
 
+    # Computes aggregated statistics for dashboard display
     async def get_dashboard_stats(self) -> DashboardStats:
         today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
         total_emp = await self.emp.count_documents({"is_active": True})
 
         active_res = await self.col.aggregate([
@@ -199,6 +214,7 @@ class AttendanceService:
             {"$project": {"hours": {"$divide": [{"$subtract": ["$last_out", "$first_in"]}, 3600000]}}},
             {"$group": {"_id": None, "avg": {"$avg": "$hours"}}},
         ]).to_list(1)
+
         avg_hours = round(hrs_res[0]["avg"], 2) if hrs_res else 0.0
 
         return DashboardStats(

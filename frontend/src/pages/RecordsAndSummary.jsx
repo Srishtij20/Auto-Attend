@@ -122,14 +122,17 @@ export function Summary() {
         </div>
         <Button onClick={load}>Load</Button>
         <Button onClick={() => setDate(new Date().toISOString().slice(0, 10))}>Today</Button>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-          {[{ label: 'Present', value: stats.present, color: '#16a34a', bg: '#dcfce7' }, { label: 'Half day', value: stats.half, color: '#d97706', bg: '#fef3c7' }, { label: 'Total hours', value: stats.totalHours + 'h', color: '#4f46e5', bg: '#eef2ff' }].map(s => (
-            <div key={s.label} style={{ padding: '10px 16px', borderRadius: 10, background: s.bg, minWidth: 100, textAlign: 'center' }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: s.color, opacity: .8, marginTop: 2 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
+        <button
+          onClick={() => api.downloadReport('pdf', date)}
+          style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e7e5e4', background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+          📄 PDF
+        </button>
+        <button
+          onClick={() => api.downloadReport('excel', date)}
+          style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e7e5e4', background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+          📊 Excel
+        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}></div>
       </div>
       <Card>
         {loading && <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><Spinner size={28} /></div>}

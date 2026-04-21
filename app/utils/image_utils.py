@@ -40,3 +40,29 @@ def numpy_to_bytes(image: np.ndarray, fmt: str = "JPEG") -> bytes:
     buf = io.BytesIO()
     pil.save(buf, format=fmt, quality=85)
     return buf.getvalue()
+
+import face_recognition
+
+def get_face_encoding(base64_string: str):
+    try:
+        # Step 1: Decode image (use your existing function)
+        image = decode_base64_image(base64_string)
+
+        # Step 2: Validate size
+        if not validate_image_size(image):
+            return None
+
+        # Step 3: Preprocess
+        image = preprocess_for_recognition(image)
+
+        # Step 4: Generate encoding
+        encodings = face_recognition.face_encodings(image)
+
+        if len(encodings) == 0:
+            return None
+
+        return encodings[0].tolist()
+
+    except Exception as e:
+        logger.error(f"Encoding error: {e}")
+        return None

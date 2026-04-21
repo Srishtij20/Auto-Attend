@@ -49,7 +49,7 @@ export default function MarkAttendance() {
       const res = await api.markAttendance(captured, { location })
       setResult(res)
       if (res.success) setToast({ msg: `${res.employee_name} — ${res.attendance_type?.replace('_', ' ')} recorded!`, type: 'success' })
-    } catch (e) { setToast({ msg: e.message, type: 'error' }) }
+    } catch (e) { setToast({ msg: typeof e.message === 'string' ? e.message : 'Recognition failed', type: 'error' }) }
     finally { setLoading(false) }
   }
 
