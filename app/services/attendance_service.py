@@ -6,11 +6,11 @@ from app.models.attendance import (
     AttendanceType, AttendanceMarkResponse, AttendanceSummary, DashboardStats
 )
 from app.config import get_settings
-
+ 
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-
+ 
+ 
 # Service layer handling attendance logic and analytics
 class AttendanceService:
     def __init__(self, db: AsyncIOMotorDatabase):
@@ -18,7 +18,7 @@ class AttendanceService:
         self.col = db.attendance
         self.emp = db.employees
         self.dup_window = timedelta(minutes=settings.duplicate_attendance_window_minutes)
-
+ 
     # Checks if a similar attendance entry exists within a defined time window
     async def check_duplicate(self, employee_id: str, attendance_type: AttendanceType) -> bool:
         cutoff = datetime.utcnow() - self.dup_window
@@ -28,7 +28,7 @@ class AttendanceService:
             "timestamp": {"$gte": cutoff},
         })
         return rec is not None
-
+ 
     # Determines whether the next attendance should be check-in or check-out
     async def determine_type(self, employee_id: str) -> AttendanceType:
         today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -43,7 +43,7 @@ class AttendanceService:
             if last["attendance_type"] == AttendanceType.CHECK_IN
             else AttendanceType.CHECK_IN
         )
-
+ 
     # Records attendance entry with validation and duplicate prevention
     async def mark_attendance(
         self,
@@ -58,7 +58,7 @@ class AttendanceService:
         try:
             if attendance_type is None:
                 attendance_type = await self.determine_type(employee_id)
-
+ 
             if await self.check_duplicate(employee_id, attendance_type):
                 return AttendanceMarkResponse(
                     success=False,
@@ -67,7 +67,7 @@ class AttendanceService:
                     employee_id=employee_id,
                     employee_name=employee_name,
                 )
-
+ 
             ts = datetime.utcnow()
             await self.col.insert_one({
                 "employee_id": employee_id,
@@ -79,7 +79,7 @@ class AttendanceService:
                 "device_id": device_id,
                 "snapshot_id": snapshot_id,
             })
-
+ 
             return AttendanceMarkResponse(
                 success=True,
                 message=f"{attendance_type.value.replace('_', ' ').title()} recorded successfully",
@@ -92,7 +92,7 @@ class AttendanceService:
         except Exception as e:
             logger.error(f"mark_attendance error: {e}")
             return AttendanceMarkResponse(success=False, message=str(e))
-
+ 
     # Retrieves filtered and paginated attendance records
     async def get_records(
         self,
@@ -108,7 +108,7 @@ class AttendanceService:
             query["employee_id"] = employee_id
         if attendance_type:
             query["attendance_type"] = attendance_type
-
+ 
         ts_filter: Dict = {}
         if start_date:
             ts_filter["$gte"] = start_date
@@ -116,24 +116,25 @@ class AttendanceService:
             ts_filter["$lte"] = end_date
         if ts_filter:
             query["timestamp"] = ts_filter
-
+ 
         total = await self.col.count_documents(query)
         cursor = self.col.find(query).sort("timestamp", -1).skip(skip).limit(limit)
         records = await cursor.to_list(length=limit)
-
+ 
         for r in records:
             r["_id"] = str(r["_id"])
-
+ 
         return {"items": records, "total": total, "skip": skip, "limit": limit}
-
-    # Generates per-employee daily attendance summary
+ 
+    # Generates per-employee and per-student daily attendance summary
     async def get_daily_summary(self, date: Optional[datetime] = None) -> List[AttendanceSummary]:
         if date is None:
             date = datetime.utcnow()
-
+ 
         day_start = date.replace(hour=0, minute=0, second=0, microsecond=0)
         day_end = day_start + timedelta(days=1)
-
+ 
+        # ── Employee attendance ───────────────────────────────
         pipeline = [
             {"$match": {"timestamp": {"$gte": day_start, "$lt": day_end}}},
             {"$sort": {"timestamp": 1}},
@@ -143,15 +144,14 @@ class AttendanceService:
                 "records": {"$push": {"type": "$attendance_type", "time": "$timestamp"}},
             }},
         ]
-
         results = await self.col.aggregate(pipeline).to_list(length=None)
-
+ 
         emp_ids = [r["_id"] for r in results]
         emp_docs = await self.emp.find(
             {"employee_id": {"$in": emp_ids}}, {"employee_id": 1, "department": 1}
         ).to_list(length=None)
         dept_map = {e["employee_id"]: e.get("department") for e in emp_docs}
-
+ 
         summaries = []
         for result in results:
             check_in = check_out = None
@@ -160,13 +160,13 @@ class AttendanceService:
                     check_in = rec["time"]
                 elif rec["type"] == AttendanceType.CHECK_OUT:
                     check_out = rec["time"]
-
+ 
             total_hours = None
             if check_in and check_out:
                 total_hours = round((check_out - check_in).total_seconds() / 3600, 2)
-
+ 
             status = "present" if (check_in and check_out) else "half_day" if check_in else "absent"
-
+ 
             summaries.append(AttendanceSummary(
                 employee_id=result["_id"],
                 employee_name=result["employee_name"],
@@ -177,22 +177,47 @@ class AttendanceService:
                 total_hours=total_hours,
                 status=status,
             ))
-
+ 
+        # ── Student attendance from session_attendance ────────
+        student_pipeline = [
+            {"$match": {"date": day_start.strftime("%Y-%m-%d")}},
+            {"$group": {
+                "_id": "$student_id",
+                "full_name": {"$first": "$full_name"},
+                "class_name": {"$first": "$class_name"},
+                "timestamp": {"$first": "$timestamp"},
+                "count": {"$sum": 1},
+            }},
+        ]
+        student_results = await self.db.session_attendance.aggregate(student_pipeline).to_list(length=None)
+ 
+        for r in student_results:
+            summaries.append(AttendanceSummary(
+                employee_id=r["_id"],
+                employee_name=r["full_name"],
+                department=r.get("class_name"),
+                date=day_start.strftime("%Y-%m-%d"),
+                check_in=r.get("timestamp"),
+                check_out=None,
+                total_hours=None,
+                status="present",
+            ))
+ 
         return summaries
-
+ 
     # Computes aggregated statistics for dashboard display
     async def get_dashboard_stats(self) -> DashboardStats:
         today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-
+ 
         total_emp = await self.emp.count_documents({"is_active": True})
-
+ 
         active_res = await self.col.aggregate([
             {"$match": {"timestamp": {"$gte": today}}},
             {"$group": {"_id": "$employee_id"}},
             {"$count": "count"},
         ]).to_list(1)
         active_today = active_res[0]["count"] if active_res else 0
-
+ 
         cin_res = await self.col.aggregate([
             {"$match": {"timestamp": {"$gte": today}}},
             {"$sort": {"timestamp": 1}},
@@ -201,7 +226,7 @@ class AttendanceService:
             {"$count": "count"},
         ]).to_list(1)
         checked_in_now = cin_res[0]["count"] if cin_res else 0
-
+ 
         hrs_res = await self.col.aggregate([
             {"$match": {"timestamp": {"$gte": today}}},
             {"$sort": {"timestamp": 1}},
@@ -214,9 +239,9 @@ class AttendanceService:
             {"$project": {"hours": {"$divide": [{"$subtract": ["$last_out", "$first_in"]}, 3600000]}}},
             {"$group": {"_id": None, "avg": {"$avg": "$hours"}}},
         ]).to_list(1)
-
+ 
         avg_hours = round(hrs_res[0]["avg"], 2) if hrs_res else 0.0
-
+ 
         return DashboardStats(
             total_employees=total_emp,
             active_today=active_today,

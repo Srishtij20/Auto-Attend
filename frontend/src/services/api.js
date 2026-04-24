@@ -98,7 +98,7 @@ addStudentPhoto: async (studentId, file) => {
   const form = new FormData(); form.append('file', file);
   return reqForm(`/students/${studentId}/photos`, form);
 },
-getStudentAttendance: (id) => req(`/students/${id}/attendance`),
+getStudentAttendance: (id) => req(`/sessions/student/${id}/attendance`),
 
 // Sessions
 startSession: (formData) => reqForm('/sessions/start', formData),

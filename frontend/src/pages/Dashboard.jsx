@@ -9,11 +9,18 @@ export default function Dashboard() {
   const [summary, setSummary] = useState([])
   const [feed, setFeed] = useState([])
   const [loading, setLoading] = useState(true)
+  const [totalStudents, setTotalStudents] = useState(0)
 
   const load = useCallback(async () => {
     try {
-      const [s, sum] = await Promise.all([api.getDashboard(), api.getSummary()])
-      setStats(s); setSummary(sum)
+      const [s, sum, students] = await Promise.all([
+        api.getDashboard(),
+        api.getSummary(),
+        api.getStudents({ limit: 1000 }),
+      ])
+      setStats(s)
+      setSummary(sum)
+      setTotalStudents(Array.isArray(students) ? students.length : (students?.items?.length ?? 0))
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
   }, [])
@@ -37,6 +44,7 @@ export default function Dashboard() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 28 }}>
         <StatCard label="Total Employees" value={stats?.total_employees ?? '—'} color="#4f46e5" />
+        <StatCard label="Total Students" value={totalStudents} color="#0891b2" />
         <StatCard label="Active Today" value={stats?.active_today ?? '—'} color="#16a34a" sub={`${stats?.total_employees ? Math.round(stats.active_today / stats.total_employees * 100) : 0}% attendance`} />
         <StatCard label="Currently In" value={stats?.checked_in_now ?? '—'} color="#d97706" />
         <StatCard label="Avg Hours Today" value={(stats?.avg_hours_today ?? 0).toFixed(1) + 'h'} color="#7c3aed" />
