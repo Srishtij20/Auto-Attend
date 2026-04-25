@@ -3,7 +3,7 @@ WORKDIR /frontend
 COPY frontend/package*.json ./
 RUN npm install
 COPY frontend/ ./
-RUN npm run build
+RUN chmod +x node_modules/.bin/vite && npm run build
 
 FROM python:3.11-slim
 RUN apt-get update && apt-get install -y \
